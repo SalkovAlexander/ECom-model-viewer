@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Тест</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css">
+  </head>
+
+  <body>
+    <script
+      type="module"
+      src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
+    ></script>
+    <table style="background-color: rgb(123, 123, 123);" height = "1000"; width = "100%">
+      <tr>
+        <td>
+          <model-viewer 
+          id = "Glass"
+          style="height: 100%;width: 100%;"
+          loading = "eager"
+          alt="Neil Armstrong's Spacesuit from the Smithsonian Digitization Programs Office and National Air and Space Museum"
+          src="https://www.dl.dropboxusercontent.com/s/vfn8f7dbj48sxlf/Glasses_1.glb"
+          ar
+          environment-image="https://cdn.vev.design/private/Tr1z5E7fRfebmaI3Le2T8vQsHud2/c_W6ves3U_abandoned_factory_canteen_01_1k.hdr.hdr"
+          poster="https://www.dl.dropboxusercontent.com/s/zjxfeqdmi4b1ddj/LoadingImage.png"
+          shadow-intensity="1"
+          camera-controls
+          touch-action="pan-y">
+            <div class="controls">
+              <div id = "Models" class="scrolling-wrapper">
+
+              </div>
+              <div id = "MaterialVariants" class="scrolling-wrapper">
+                
+              </div>
+            </div>
+            <div hidden id="AnimControls">
+              <div class="flex-container-player" id="flex-container-player">
+                <button onclick="PlayPause();" type="submit"><img src="resources/PlayPauseIcon.png" height="60%"></button>
+                <div class="slidecontainer">
+                  <input type="range" min="0.01" max="99.99" value="0" step="0.1" class="slider" id="myRange">
+                </div>
+              </div>
+            </div>
+          </model-viewer>
+        </td>
+      </tr>
+    </table>
+    <script src="Script_new.js" type="text/javascript"></script>
+  </body>
+</html>
