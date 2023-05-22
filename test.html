@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Database Table Editor</title>
+    <style>
+        /* Стили для таблицы */
+        table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+    </style>
+</head>
+
+<body>
+    <h1>Editable Table</h1>
+    <div id="table-container">
+      <!-- Таблица будет отображаться здесь -->
+    </div>
+    <script>
+// Получить ссылку на контейнер таблицы
+var tableContainer = document.getElementById('table-container');
+
+// Массив с данными таблицы (пример)
+var tableData = [{"project_name":"Glasses","hdri_link":"https://www.dl.dropboxusercontent.com/s/i47gkd90guz688g/kloofendal_48d_partly_cloudy_puresky_1k.hdr","poster_link":"https://www.dl.dropboxusercontent.com/s/zjxfeqdmi4b1ddj/LoadingImage.png","project_key":"GLASSES01"},{"project_name":"Tables","hdri_link":"https://www.dl.dropboxusercontent.com/s/i47gkd90guz688g/kloofendal_48d_partly_cloudy_puresky_1k.hdr","poster_link":"https://www.dl.dropboxusercontent.com/s/zjxfeqdmi4b1ddj/LoadingImage.png","project_key":"TABLES01"}];
+
+// Создать таблицу
+var table = document.createElement('table');
+
+// Создать заголовок таблицы
+var thead = document.createElement('thead');
+var headerRow = document.createElement('tr');
+for (var key in tableData[0]) {
+  var th = document.createElement('th');
+  th.textContent = key;
+  headerRow.appendChild(th);
+}
+thead.appendChild(headerRow);
+table.appendChild(thead);
+
+// Создать тело таблицы
+var tbody = document.createElement('tbody');
+tableData.forEach(function(rowData) {
+  var row = document.createElement('tr');
+  for (var key in rowData) {
+    var td = document.createElement('td');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = rowData[key];
+    td.appendChild(input);
+    row.appendChild(td);
+  }
+  tbody.appendChild(row);
+});
+table.appendChild(tbody);
+
+// Добавить обработчик события изменения значения ячейки
+table.addEventListener('change', function(event) {
+  var target = event.target;
+  if (target.tagName === 'INPUT') {
+    var row = target.parentNode.parentNode;
+    var rowIndex = row.rowIndex;
+    var cellIndex = target.parentNode.cellIndex;
+    var newValue = target.value;
+    tableData[rowIndex - 1][Object.keys(tableData[0])[cellIndex]] = newValue;
+    console.log('Обновленное значение: ', newValue);
+  }
+});
+
+// Добавить таблицу в контейнер
+tableContainer.appendChild(table);
+    </script>
+</body>
+
+</html>

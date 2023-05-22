@@ -14,9 +14,9 @@ let response = new Promise(function (resolve, reject) {
   fetch('http://localhost:3000/data', {
     method: 'POST',
     headers: {
-      'Content-Type': 'text/plain;charset=UTF-8'
+      'Content-Type': 'application/json;charset=UTF-8'
     },
-    body: CatalogKey
+    body: JSON.stringify({CatalogKey})
   })
   .then(response => response.text())
   .then(data => {

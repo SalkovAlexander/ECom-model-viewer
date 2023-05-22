@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Projects</title>
+    <style>
+        /* Стили для таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Projects</h1>
+    <div id="table-container">
+        <!-- Таблица будет отображаться здесь -->
+    </div>
+    <button onclick="logOut()">Выйти</button>
+    <script>
+        let catalog;
+
+        // Получение токена из sessionStorage
+        const token = sessionStorage.getItem('token');
+
+        // Проверка наличия токена
+        if (!token) {
+            console.log('Токен отсутствует. Выполните аутентификацию.');
+            document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
+        }
+        else {
+            // Отправка запроса на сервер с заголовком Authorization содержащим токен
+            let response = new Promise(function (resolve, reject) {
+                fetch('http://localhost:3000/projects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=UTF-8',
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                    .then(response => response.text())
+                    .then(data => {
+                        resolve(data);
+                    })
+                    .catch(error => {
+                        console.error(error);
+                    });
+            });
+
+            response.then(data => {
+                catalog = JSON.parse(data);
+                console.log(JSON.stringify(catalog));
+                drawProjects(catalog);
+            });
+        }
+
+        function drawProjects(tableData) {
+            var tableContainer = document.getElementById('table-container');
+            // Создать таблицу
+            var table = document.createElement('table');
+
+            const exclude = 'project_id';
+
+            // Создать заголовок таблицы
+            var thead = document.createElement('thead');
+            var headerRow = document.createElement('tr');
+            for (var key in tableData[0]) {
+                if (key !== exclude) { // Исключаем поле "project_id"
+                    var th = document.createElement('th');
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                }
+            }
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Создать тело таблицы
+            var tbody = document.createElement('tbody');
+            tableData.forEach(function (rowData) {
+                var row = document.createElement('tr');
+                for (var key in rowData) {
+                    if (key !== exclude) { // Исключаем поле "project_id"
+                        var td = document.createElement('td');
+                        var input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = rowData[key];
+                        td.appendChild(input);
+                        row.appendChild(td);
+                    }
+                }
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+
+            // Добавить обработчик события изменения значения ячейки
+            table.addEventListener('change', function (event) {
+                var target = event.target;
+                if (target.tagName === 'INPUT') {
+                    var row = target.parentNode.parentNode;
+                    var rowIndex = row.rowIndex;
+                    var cellIndex = target.parentNode.cellIndex;
+                    var newValue = target.value;
+                    // tableData[rowIndex - 1][Object.keys(tableData[0])[cellIndex]] = newValue;
+
+                    var keys = Object.keys(tableData[rowIndex - 1]);
+                    //Удаляем нежелательный элемент
+                    keys = keys.filter(function (element) {
+                        return element !== exclude;
+                    });
+                    var key = keys[cellIndex];
+                    console.log('Обновлено значение поля: ', key);
+                    console.log('ID: ', tableData[rowIndex - 1].project_id);
+                    console.log('Обновленное значение: ', newValue);
+                    changeData(tableData[rowIndex - 1].project_id, key, newValue);
+                }
+            });
+            // Добавить таблицу в контейнер
+            tableContainer.appendChild(table);
+        }
+
+        function changeData(id, column, newValue) {
+            fetch('http://localhost:3000/changedata', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id, column, newValue })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+    
+        function logOut()
+        {
+            sessionStorage.removeItem('token');
+            window.location.href = './Login.html';
+        }
+    </script>
+</body>
+
+</html>
