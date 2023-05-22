@@ -22,6 +22,12 @@
 
         input[type="text"] {
             width: 100%;
+            height: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        button{
+            width: 100%;
             padding: 5px;
             box-sizing: border-box;
         }
@@ -33,9 +39,13 @@
     <div id="table-container">
         <!-- Таблица будет отображаться здесь -->
     </div>
+    <br></br>
+    <button onclick="addProject()">Добавить проект</button>
+    <br></br>
     <button onclick="logOut()">Выйти</button>
     <script>
         let catalog;
+        
 
         // Получение токена из sessionStorage
         const token = sessionStorage.getItem('token');
@@ -71,6 +81,65 @@
             });
         }
 
+        function addProject()
+        {
+            fetch('http://localhost:3000/projects/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status = 'ok')
+                    {
+                        console.log('Успешно добавлен проект');
+                        location. reload();
+                    }
+                    else
+                        console.log('Ошибка добавления проекта');
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function deleteProject(id)
+        {
+            fetch('http://localhost:3000/projects/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status = 'ok')
+                    {
+                        console.log('Успешно удален проект');
+                        location. reload();
+                    }
+                    else
+                        console.log('Ошибка добавления проекта');
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function viewProject(key)
+        {
+            window.open('../Site.html?ProjectKey=' + key);
+        }
+
+        function editProject(id)
+        {
+            alert('Рредактирование проекта с id = '+ id);
+        }
+
         function drawProjects(tableData) {
             var tableContainer = document.getElementById('table-container');
             // Создать таблицу
@@ -88,6 +157,18 @@
                     headerRow.appendChild(th);
                 }
             }
+
+            //Создание столбцов для кнопок
+            var th = document.createElement('th')
+            th.textContent = 'Предпросмотр';
+            headerRow.appendChild(th);
+            var th = document.createElement('th')
+            th.textContent = 'Изменить';
+            headerRow.appendChild(th);
+            var th = document.createElement('th')
+            th.textContent = 'Удалить';
+            headerRow.appendChild(th);
+
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
@@ -105,8 +186,31 @@
                         row.appendChild(td);
                     }
                 }
+                //Добавление кнопок
+                var td = document.createElement('td');
+                var button = document.createElement('button');
+                button.textContent = 'Предпросмотр';
+                button.addEventListener('click', function(event){viewProject(rowData.project_key);});
+                td.appendChild(button);
+                row.appendChild(td);
+
+                var td = document.createElement('td');
+                var button = document.createElement('button');
+                button.textContent = 'Изменить';
+                button.addEventListener('click', function(event){editProject(rowData.project_id);});
+                td.appendChild(button);
+                row.appendChild(td);
+
+                td = document.createElement('td');
+                button = document.createElement('button');
+                button.textContent = 'Удалить';
+                button.addEventListener('click', function(event){deleteProject(rowData.project_id);});
+                td.appendChild(button);
+                row.appendChild(td);
+
                 tbody.appendChild(row);
             });
+
             table.appendChild(tbody);
 
             // Добавить обработчик события изменения значения ячейки
@@ -146,7 +250,13 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log(data.message);
+                    if(data.status = 'ok')
+                    {
+                        console.log('Успешно обновлено значение');
+                        location. reload();
+                    }
+                    else
+                        console.log('Ошибка добавления проекта');
                 })
                 .catch(error => {
                     console.error('Ошибка:', error);

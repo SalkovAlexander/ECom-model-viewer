@@ -77,6 +77,49 @@ app.post('/projects', authenticateToken, (req, res) => {
   });
 });
 
+app.post('/projects/add', authenticateToken, (req, res) => {
+  //Получаем токен
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  // Если токен прошел верификацию, можно предоставить доступ
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  pool.query('INSERT INTO public."Projects" (owner_user_id) VALUES ((SELECT id FROM public."Users" WHERE login = (($1))))',
+  [username],
+  (error, results) => {
+    if (error) {
+      console.error('Ошибка выполнения запроса:', error);
+      res.status(500).send('Произошла ошибка на сервере');
+    } else {
+      // Отправка данных из базы данных в качестве ответа
+      console.log('Пользователь ' + username + ' создал новый проект');
+      res.json({status: 'ok'});
+    }
+  });
+});
+
+app.post('/projects/delete', authenticateToken, (req, res) => {
+  //Получаем токен
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  // Если токен прошел верификацию, можно предоставить доступ
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { id } = req.body;
+  pool.query('DELETE FROM public."Projects" WHERE project_id = ($2) AND owner_user_id = (SELECT id FROM public."Users" WHERE login = ($1)) AND NOT EXISTS ( SELECT 1 FROM public."3d_models" WHERE owner_project_id = ($2));',
+  [username, id],
+  (error, results) => {
+    if (error) {
+      console.error('Ошибка выполнения запроса:', error);
+      res.status(500).send('Произошла ошибка на сервере');
+    } else {
+      // Отправка данных из базы данных в качестве ответа
+      console.log('Пользователь ' + username + ' удалид проект с id = ' + id);
+      res.json({status: 'ok'});
+    }
+  });
+});
+
 app.post('/changedata', authenticateToken, (req, res) => {
   //Получаем токен
   const authHeader = req.headers['authorization'];

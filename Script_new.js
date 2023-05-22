@@ -1,14 +1,12 @@
 "use strict";
 const modelViewerVariants = document.querySelector("model-viewer#Glass");
-// const CatalogLink = "https://www.dl.dropboxusercontent.com/s/50r5whma2nwsx4f/Catalog.json";
-const CatalogKey = "TABLES01";
+
+const urlParams = new URLSearchParams(window.location.search);
+let CatalogKey = "TABLES01";
+if(urlParams.get('ProjectKey') != null)
+  CatalogKey = urlParams.get('ProjectKey');
+
 let catalog;
-// let response = new Promise(function (resolve, reject) {
-//     fetch(CatalogLink)
-//         .then(data => {
-//             resolve(data.json());
-//         });
-// });
 
 let response = new Promise(function (resolve, reject) {
   fetch('http://localhost:3000/data', {
