@@ -77,6 +77,26 @@ app.post('/projects', authenticateToken, (req, res) => {
   });
 });
 
+app.post('/models', authenticateToken, (req, res) => {
+  //Получаем токен
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  // Если токен прошел верификацию, можно предоставить доступ
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  pool.query('SELECT json_agg(json_build_object(\'project_id\', public."Projects".project_id, \'project_name\', public."Projects".project_name, \'hdri_link\', public."Projects".hdri_link, \'poster_link\', public."Projects".poster_link, \'project_key\', public."Projects".project_key ) ) AS project_data FROM public."Projects" WHERE owner_user_id = ( SELECT id FROM public."Users" WHERE login = ($1));',
+  [username],
+  (error, results) => {
+    if (error) {
+      console.error('Ошибка выполнения запроса:', error);
+      res.status(500).send('Произошла ошибка на сервере');
+    } else {
+      // Отправка данных из базы данных в качестве ответа
+      res.json(results.rows[0].project_data);
+    }
+  });
+});
+
 app.post('/projects/add', authenticateToken, (req, res) => {
   //Получаем токен
   const authHeader = req.headers['authorization'];

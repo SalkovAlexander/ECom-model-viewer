@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Projects</title>
+    <style>
+        /* Стили для таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Projects</h1>
+    <div id="table-container">
+        <!-- Таблица будет отображаться здесь -->
+    </div>
+    <br></br>
+    <button id="addProjectBtn">Добавить проект</button>
+    <br></br>
+    <button id="logOutBtn">Выйти</button>
+    <script>
+        // Получение токена из sessionStorage
+        const token = sessionStorage.getItem('token');
+
+        // Проверка наличия токена
+        if (!token) {
+            console.log('Токен отсутствует. Выполните аутентификацию.');
+            document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
+        } else {
+            const addProjectBtn = document.getElementById('addProjectBtn');
+            const logOutBtn = document.getElementById('logOutBtn');
+
+            // Отправка запроса на сервер с заголовком Authorization содержащим токен
+            refreshTable();
+
+            addProjectBtn.addEventListener('click', addProject);
+            logOutBtn.addEventListener('click', logOut);
+        }
+
+        function refreshTable() {
+            fetch('http://localhost:3000/projects', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(catalog => {
+                    console.log(JSON.stringify(catalog));
+                    drawTable(catalog);
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        }
+
+        function addProject() {
+            fetch('http://localhost:3000/projects/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        console.log('Успешно добавлен проект');
+                        refreshTable();
+                    } else {
+                        console.log('Ошибка добавления проекта');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function deleteProject(id) {
+            fetch('http://localhost:3000/projects/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        console.log('Успешно удален проект');
+                        refreshTable();
+                    } else {
+                        console.log('Ошибка удаления проекта');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function viewProject(key) {
+            window.open(`../Site.html?ProjectKey=${key}`);
+        }
+
+        function editProject(id) {
+            // alert('Рредактирование проекта с id = '+ id);
+        }
+
+        function drawTable(tableData) {
+            const tableContainer = document.getElementById('table-container');
+            tableContainer.innerHTML = '';
+
+            // Создать таблицу
+            const table = document.createElement('table');
+
+            const exclude = 'project_id';
+            const keys = Object.keys(tableData[0]).filter(key => key !== exclude);
+
+            // Создать заголовок таблицы
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+
+            keys.forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = key;
+                headerRow.appendChild(th);
+            });
+
+            // Создание столбцов для кнопок
+            const buttons = ['Предпросмотр', 'Изменить', 'Удалить'];
+
+            buttons.forEach(buttonText => {
+                const th = document.createElement('th');
+                th.textContent = buttonText;
+                headerRow.appendChild(th);
+            });
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Создать тело таблицы
+            const tbody = document.createElement('tbody');
+            tableData.forEach(rowData => {
+                const row = document.createElement('tr');
+
+                keys.forEach(key => {
+                    const td = document.createElement('td');
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = rowData[key];
+                    td.appendChild(input);
+                    row.appendChild(td);
+                });
+
+                buttons.forEach((buttonText, index) => {
+                    const td = document.createElement('td');
+                    const button = document.createElement('button');
+                    button.textContent = buttonText;
+
+                    if (buttonText === 'Предпросмотр') {
+                        button.addEventListener('click', () => viewProject(rowData.project_key));
+                    } else if (buttonText === 'Изменить') {
+                        button.addEventListener('click', () => editProject(rowData.project_id));
+                    } else if (buttonText === 'Удалить') {
+                        button.addEventListener('click', () => deleteProject(rowData.project_id));
+                    }
+
+                    td.appendChild(button);
+                    row.appendChild(td);
+                });
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+
+            // Добавить обработчик события изменения значения ячейки
+            table.addEventListener('change', event => {
+                const target = event.target;
+                if (target.tagName === 'INPUT') {
+                    const row = target.parentNode.parentNode;
+                    const rowIndex = row.rowIndex;
+                    const cellIndex = target.parentNode.cellIndex;
+                    const newValue = target.value;
+
+                    const rowId = tableData[rowIndex - 1].project_id;
+                    const column = keys[cellIndex];
+
+                    console.log('Обновлено значение поля:', column);
+                    console.log('ID:', rowId);
+                    console.log('Обновленное значение:', newValue);
+
+                    changeData(rowId, column, newValue);
+                }
+            });
+
+            // Добавить таблицу в контейнер
+            tableContainer.appendChild(table);
+        }
+
+        function changeData(id, column, newValue) {
+            fetch('http://localhost:3000/changedata', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ id, column, newValue })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        console.log('Успешно обновлено значение');
+                        refreshTable();
+                    } else {
+                        console.log('Ошибка обновления проекта');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function logOut() {
+            sessionStorage.removeItem('token');
+            window.location.href = './Login.html';
+        }
+    </script>
+</body>
+
+</html>

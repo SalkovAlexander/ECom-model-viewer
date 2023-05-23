@@ -57,6 +57,11 @@
         }
         else {
             // Отправка запроса на сервер с заголовком Authorization содержащим токен
+            refreshTable();            
+        }
+        
+        function refreshTable()
+        {
             let response = new Promise(function (resolve, reject) {
                 fetch('http://localhost:3000/projects', {
                     method: 'POST',
@@ -76,8 +81,8 @@
 
             response.then(data => {
                 catalog = JSON.parse(data);
-                console.log(JSON.stringify(catalog));
-                drawProjects(catalog);
+                console.log(JSON.stringify(catalog)); 
+                drawTable(catalog);
             });
         }
 
@@ -95,7 +100,7 @@
                     if(data.status = 'ok')
                     {
                         console.log('Успешно добавлен проект');
-                        location. reload();
+                        refreshTable();
                     }
                     else
                         console.log('Ошибка добавления проекта');
@@ -120,7 +125,7 @@
                     if(data.status = 'ok')
                     {
                         console.log('Успешно удален проект');
-                        location. reload();
+                        refreshTable();
                     }
                     else
                         console.log('Ошибка добавления проекта');
@@ -137,10 +142,11 @@
 
         function editProject(id)
         {
-            alert('Рредактирование проекта с id = '+ id);
+            // alert('Рредактирование проекта с id = '+ id);
         }
 
-        function drawProjects(tableData) {
+        function drawTable(tableData) {
+            document.getElementById("table-container").innerHTML = ''
             var tableContainer = document.getElementById('table-container');
             // Создать таблицу
             var table = document.createElement('table');
@@ -253,7 +259,7 @@
                     if(data.status = 'ok')
                     {
                         console.log('Успешно обновлено значение');
-                        location. reload();
+                        refreshTable();
                     }
                     else
                         console.log('Ошибка добавления проекта');
