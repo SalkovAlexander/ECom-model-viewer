@@ -26,7 +26,7 @@ app.post('/login', async (req, res) => {
   // Проверка логина и пароля (ваша бизнес-логика)
   if (await checkLogin(username, password) == true) {
     // Создание токена с данными пользователя
-    const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
+    const token = jwt.sign({ username }, secretKey, { expiresIn: '3h' });
     // Отправка токена в ответе
     res.json({ token });
   } else {
@@ -237,7 +237,7 @@ app.post('/changedata', authenticateToken, (req, res) => {
   pool.query(query, [newValue, username, id])
     .then(() => {
       console.log('Пользователь ' + username + ' изменил значение поле ' + column + ' проекта с id = ' + id + ' на ' + newValue);
-      res.json({ message: 'ok' });
+      res.json({ status: 'ok' });
     })
     .catch(error => {
       handleError(res, error);

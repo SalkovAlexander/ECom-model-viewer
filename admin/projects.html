@@ -229,15 +229,7 @@
                 },
                 body: JSON.stringify({ id, column, newValue })
             })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        console.log('Успешно обновлено значение');
-                        refreshTable();
-                    } else {
-                        console.log('Ошибка обновления проекта');
-                    }
-                })
+                .then(response => handleResponse(response, 'Успешно обновлено значение', 'Ошибка обновления значения'))
                 .catch(error => {
                     console.error('Ошибка:', error);
                 });
@@ -257,9 +249,9 @@
         }
 
         function handleResponse(response, successMessage, errorMessage) {
-            if (response.status === 401) {
+            if (response.status === 401 || response.status === 403) {
                 // Перенаправление на страницу авторизации
-                window.location.href = './Login.html';
+                window.location.href = './SessionExpire.html';
             } else {
                 return response.json().then(data => {
                     if (data.status === 'ok') {
