@@ -56,109 +56,126 @@ async function checkLogin(username, password) {
   }
 }
 
-// Роут, защищенный аутентификацией
+// Функция для получения токена из запроса
+function getTokenFromRequest(req) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  return token;
+}
+
+// Функция для обработки ошибок
+function handleError(res, error) {
+  console.error('Ошибка выполнения запроса:', error);
+  res.status(500).send('Произошла ошибка на сервере');
+}
+
+// Маршрут для получения проектов
 app.post('/projects', authenticateToken, (req, res) => {
-  //Получаем токен
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  // Если токен прошел верификацию, можно предоставить доступ
+  const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
   const username = decodedToken.username;
-  pool.query('SELECT json_agg(json_build_object(\'project_id\', public."Projects".project_id, \'project_name\', public."Projects".project_name, \'hdri_link\', public."Projects".hdri_link, \'poster_link\', public."Projects".poster_link, \'project_key\', public."Projects".project_key ) ) AS project_data FROM public."Projects" WHERE owner_user_id = ( SELECT id FROM public."Users" WHERE login = ($1));',
-  [username],
-  (error, results) => {
-    if (error) {
-      console.error('Ошибка выполнения запроса:', error);
-      res.status(500).send('Произошла ошибка на сервере');
-    } else {
-      // Отправка данных из базы данных в качестве ответа
+
+  const query = `
+    SELECT json_agg(json_build_object('project_id', public."Projects".project_id, 'project_name', public."Projects".project_name, 'hdri_link', public."Projects".hdri_link, 'poster_link', public."Projects".poster_link, 'project_key', public."Projects".project_key)) AS project_data
+    FROM public."Projects"
+    WHERE owner_user_id = (SELECT id FROM public."Users" WHERE login = $1)
+  `;
+
+  pool.query(query, [username])
+    .then(results => {
       res.json(results.rows[0].project_data);
-    }
-  });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
 });
 
+// Маршрут для получения моделей
 app.post('/models', authenticateToken, (req, res) => {
-  //Получаем токен
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  // Если токен прошел верификацию, можно предоставить доступ
-  const decodedToken = jwt.verify(token, secretKey);
-  const username = decodedToken.username;
-  pool.query('SELECT json_agg(json_build_object(\'project_id\', public."Projects".project_id, \'project_name\', public."Projects".project_name, \'hdri_link\', public."Projects".hdri_link, \'poster_link\', public."Projects".poster_link, \'project_key\', public."Projects".project_key ) ) AS project_data FROM public."Projects" WHERE owner_user_id = ( SELECT id FROM public."Users" WHERE login = ($1));',
-  [username],
-  (error, results) => {
-    if (error) {
-      console.error('Ошибка выполнения запроса:', error);
-      res.status(500).send('Произошла ошибка на сервере');
-    } else {
-      // Отправка данных из базы данных в качестве ответа
-      res.json(results.rows[0].project_data);
-    }
-  });
-});
-
-app.post('/projects/add', authenticateToken, (req, res) => {
-  //Получаем токен
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  // Если токен прошел верификацию, можно предоставить доступ
-  const decodedToken = jwt.verify(token, secretKey);
-  const username = decodedToken.username;
-  pool.query('INSERT INTO public."Projects" (owner_user_id) VALUES ((SELECT id FROM public."Users" WHERE login = (($1))))',
-  [username],
-  (error, results) => {
-    if (error) {
-      console.error('Ошибка выполнения запроса:', error);
-      res.status(500).send('Произошла ошибка на сервере');
-    } else {
-      // Отправка данных из базы данных в качестве ответа
-      console.log('Пользователь ' + username + ' создал новый проект');
-      res.json({status: 'ok'});
-    }
-  });
-});
-
-app.post('/projects/delete', authenticateToken, (req, res) => {
-  //Получаем токен
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  // Если токен прошел верификацию, можно предоставить доступ
+  const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
   const username = decodedToken.username;
   const { id } = req.body;
-  pool.query('DELETE FROM public."Projects" WHERE project_id = ($2) AND owner_user_id = (SELECT id FROM public."Users" WHERE login = ($1)) AND NOT EXISTS ( SELECT 1 FROM public."3d_models" WHERE owner_project_id = ($2));',
-  [username, id],
-  (error, results) => {
-    if (error) {
-      console.error('Ошибка выполнения запроса:', error);
-      res.status(500).send('Произошла ошибка на сервере');
-    } else {
-      // Отправка данных из базы данных в качестве ответа
-      console.log('Пользователь ' + username + ' удалид проект с id = ' + id);
-      res.json({status: 'ok'});
-    }
-  });
+
+  const query = `
+    SELECT json_agg(json_build_object('project_id', public."Projects".project_id, 'project_name', public."Projects".project_name, 'hdri_link', public."Projects".hdri_link, 'poster_link', public."Projects".poster_link, 'project_key', public."Projects".project_key)) AS project_data
+    FROM public."Projects"
+    WHERE owner_user_id = (SELECT id FROM public."Users" WHERE login = $1) AND project_id = $2
+  `;
+
+  pool.query(query, [username, id])
+    .then(results => {
+      res.json(results.rows[0].project_data);
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
 });
 
-app.post('/changedata', authenticateToken, (req, res) => {
-  //Получаем токен
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  // Если токен прошел верификацию, можно предоставить доступ
+// Маршрут для добавления проекта
+app.post('/projects/add', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
   const username = decodedToken.username;
-  const { id, column, newValue} = req.body;
-  pool.query('UPDATE public."Projects" SET ' + column + ' = ($1) WHERE owner_user_id = ( SELECT id FROM public."Users" WHERE login = ($2) ) AND project_id = ($3);',
-  [newValue, username, id],
-  (error, results) => {
-    if (error) {
-      console.error('Ошибка выполнения запроса:', error);
-      res.status(500).send('Произошла ошибка на сервере');
-    } else {
-      // Отправка данных из базы данных в качестве ответа
+
+  const query = `
+    INSERT INTO public."Projects" (owner_user_id)
+    VALUES ((SELECT id FROM public."Users" WHERE login = $1))
+  `;
+
+  pool.query(query, [username])
+    .then(() => {
+      console.log('Пользователь ' + username + ' создал новый проект');
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для удаления проекта
+app.post('/projects/delete', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { id } = req.body;
+
+  const query = `
+    DELETE FROM public."Projects"
+    WHERE project_id = $2 AND owner_user_id = (SELECT id FROM public."Users" WHERE login = $1)
+      AND NOT EXISTS (SELECT 1 FROM public."3d_models" WHERE owner_project_id = $2)
+  `;
+
+  pool.query(query, [username, id])
+    .then(() => {
+      console.log('Пользователь ' + username + ' удалил проект с id = ' + id);
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для изменения данных проекта
+app.post('/changedata', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { id, column, newValue } = req.body;
+
+  const query = `
+    UPDATE public."Projects"
+    SET ${column} = $1
+    WHERE owner_user_id = (SELECT id FROM public."Users" WHERE login = $2) AND project_id = $3
+  `;
+
+  pool.query(query, [newValue, username, id])
+    .then(() => {
       res.json({ message: 'ok' });
-    }
-  });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
 });
 
 // Middleware для верификации токена

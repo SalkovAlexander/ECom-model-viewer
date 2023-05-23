@@ -52,9 +52,9 @@
         if (!token) {
             document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
             var button = document.createElement('button');
-            button.textContent = 'Перейти на другую страницу';
+            button.textContent = 'Перейти на страницу авторизации';
             button.addEventListener('click', function() {
-                window.location.href = 'https://www.example.com/other-page';
+                window.location.href = './Login.html';
             });
             document.body.appendChild(button);
         } 
