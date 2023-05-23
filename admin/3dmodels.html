@@ -36,40 +36,41 @@
 </head>
 
 <body>
-    <h1>Projects</h1>
+    <h1>Models</h1>
     <div id="table-container">
-        <!-- Таблица будет отображаться здесь -->
     </div>
     <br></br>
-    <button id="addProjectBtn">Добавить проект</button>
+    <button id="addModelBtn">Добавить модель</button>
+    <br></br>
+    <button id="back">К проектам</button>
     <br></br>
     <button id="logOutBtn">Выйти</button>
     <script>
         // Получение токена из sessionStorage
-        const token = sessionStorage.getItem('token');
+        const token = sessionStorage.token;
+        const URLParams = new URLSearchParams(window.location.search);
+        const projectId = URLParams.get('ProjectId');
 
-        // Проверка наличия токена
-        if (!token) {
-            console.log('Токен отсутствует. Выполните аутентификацию.');
-            document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
-        } else {
-            const addProjectBtn = document.getElementById('addProjectBtn');
-            const logOutBtn = document.getElementById('logOutBtn');
-
+        // Проверка наличия токена и значения projectId
+        if (!token || !projectId) {
+            window.history.back();
+        }
+        else {
+            document.getElementById('addModelBtn').addEventListener('click', addModel);
+            document.getElementById('logOutBtn').addEventListener('click', logOut);
+            document.getElementById('back').addEventListener('click', function () { window.history.back(); });
             // Отправка запроса на сервер с заголовком Authorization содержащим токен
             refreshTable();
-
-            addProjectBtn.addEventListener('click', addProject);
-            logOutBtn.addEventListener('click', logOut);
         }
 
         function refreshTable() {
-            fetch('http://localhost:3000/projects', {
+            fetch('http://localhost:3000/models', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                body: JSON.stringify({ projectId })
             })
                 .then(response => response.json())
                 .then(catalog => {
@@ -81,59 +82,6 @@
                 });
         }
 
-        function addProject() {
-            fetch('http://localhost:3000/projects/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        console.log('Успешно добавлен проект');
-                        refreshTable();
-                    } else {
-                        console.log('Ошибка добавления проекта');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                });
-        }
-
-        function deleteProject(id) {
-            fetch('http://localhost:3000/projects/delete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ id })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        console.log('Успешно удален проект');
-                        refreshTable();
-                    } else {
-                        console.log('Ошибка удаления проекта');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                });
-        }
-
-        function viewProject(key) {
-            window.open(`../Site.html?ProjectKey=${key}`);
-        }
-
-        function editProject(id) {
-            // alert('Рредактирование проекта с id = '+ id);
-        }
-
         function drawTable(tableData) {
             const tableContainer = document.getElementById('table-container');
             tableContainer.innerHTML = '';
@@ -141,8 +89,8 @@
             // Создать таблицу
             const table = document.createElement('table');
 
-            const exclude = 'project_id';
-            const keys = Object.keys(tableData[0]).filter(key => key !== exclude);
+            const exclude = ['model_id', 'owner_project_id'];
+            const keys = Object.keys(tableData[0]).filter(key => !exclude.includes(key));
 
             // Создать заголовок таблицы
             const thead = document.createElement('thead');
@@ -155,7 +103,7 @@
             });
 
             // Создание столбцов для кнопок
-            const buttons = ['Предпросмотр', 'Изменить', 'Удалить'];
+            const buttons = ['Предпросмотр', 'К вариантам', 'Удалить'];
 
             buttons.forEach(buttonText => {
                 const th = document.createElement('th');
@@ -186,11 +134,11 @@
                     button.textContent = buttonText;
 
                     if (buttonText === 'Предпросмотр') {
-                        button.addEventListener('click', () => viewProject(rowData.project_key));
-                    } else if (buttonText === 'Изменить') {
-                        button.addEventListener('click', () => editProject(rowData.project_id));
+                        button.addEventListener('click', () => viewModel(rowData.model_id));
+                    } else if (buttonText === 'К вариантам') {
+                        button.addEventListener('click', () => editModel(rowData.model_id));
                     } else if (buttonText === 'Удалить') {
-                        button.addEventListener('click', () => deleteProject(rowData.project_id));
+                        button.addEventListener('click', () => deleteModel(rowData.model_id));
                     }
 
                     td.appendChild(button);
@@ -211,7 +159,7 @@
                     const cellIndex = target.parentNode.cellIndex;
                     const newValue = target.value;
 
-                    const rowId = tableData[rowIndex - 1].project_id;
+                    const rowId = tableData[rowIndex - 1].model_id;
                     const column = keys[cellIndex];
 
                     console.log('Обновлено значение поля:', column);
@@ -226,14 +174,60 @@
             tableContainer.appendChild(table);
         }
 
-        function changeData(id, column, newValue) {
-            fetch('http://localhost:3000/changedata', {
+        function addModel() {
+            fetch('http://localhost:3000/models/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ id, column, newValue })
+                body: JSON.stringify({ projectId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        console.log('Успешно добавлен проект');
+                        refreshTable();
+                    } else {
+                        console.log('Ошибка добавления проекта');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function deleteModel(modelId) {
+            fetch('http://localhost:3000/models/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ modelId, projectId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        console.log('Успешно удален проект');
+                        refreshTable();
+                    } else {
+                        console.log('Ошибка удаления проекта');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+        }
+
+        function changeData(modelId, column, newValue) {
+            fetch('http://localhost:3000/models/change', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ projectId, modelId, newValue, column })
             })
                 .then(response => response.json())
                 .then(data => {
@@ -247,6 +241,14 @@
                 .catch(error => {
                     console.error('Ошибка:', error);
                 });
+        }
+
+        function viewModel(key) {
+            window.open(`../Site.html`);
+        }
+
+        function editModel(id) {
+            alert('Пока нельзя');
         }
 
         function logOut() {

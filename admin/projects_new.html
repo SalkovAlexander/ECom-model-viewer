@@ -38,7 +38,6 @@
 <body>
     <h1>Projects</h1>
     <div id="table-container">
-        <!-- Таблица будет отображаться здесь -->
     </div>
     <br></br>
     <button id="addProjectBtn">Добавить проект</button>
@@ -53,13 +52,12 @@
             document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
             var button = document.createElement('button');
             button.textContent = 'Перейти на страницу авторизации';
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 window.location.href = './Login.html';
             });
             document.body.appendChild(button);
-        } 
-        else 
-        {
+        }
+        else {
             document.getElementById('addProjectBtn').addEventListener('click', addProject);
             document.getElementById('logOutBtn').addEventListener('click', logOut);
 
@@ -106,7 +104,7 @@
             });
 
             // Создание столбцов для кнопок
-            const buttons = ['Предпросмотр', 'Изменить', 'Удалить'];
+            const buttons = ['Предпросмотр', 'К моделям', 'Удалить'];
 
             buttons.forEach(buttonText => {
                 const th = document.createElement('th');
@@ -138,7 +136,7 @@
 
                     if (buttonText === 'Предпросмотр') {
                         button.addEventListener('click', () => viewProject(rowData.project_key));
-                    } else if (buttonText === 'Изменить') {
+                    } else if (buttonText === 'К моделям') {
                         button.addEventListener('click', () => editProject(rowData.project_id));
                     } else if (buttonText === 'Удалить') {
                         button.addEventListener('click', () => deleteProject(rowData.project_id));
@@ -244,18 +242,34 @@
                     console.error('Ошибка:', error);
                 });
         }
- 
+
         function viewProject(key) {
             window.open(`../Site.html?ProjectKey=${key}`);
         }
 
         function editProject(id) {
-            // alert('Рредактирование проекта с id = '+ id);
+            window.location.href = `./3dmodels.html?ProjectId=${id}`;
         }
 
         function logOut() {
             sessionStorage.removeItem('token');
             window.location.href = './Login.html';
+        }
+
+        function handleResponse(response, successMessage, errorMessage) {
+            if (response.status === 401) {
+                // Перенаправление на страницу авторизации
+                window.location.href = './Login.html';
+            } else {
+                return response.json().then(data => {
+                    if (data.status === 'ok') {
+                        console.log(successMessage);
+                        refreshTable();
+                    } else {
+                        console.log(errorMessage);
+                    }
+                });
+            }
         }
     </script>
 </body>

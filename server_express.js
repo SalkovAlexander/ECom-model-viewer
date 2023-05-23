@@ -95,16 +95,25 @@ app.post('/models', authenticateToken, (req, res) => {
   const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
   const username = decodedToken.username;
-  const { id } = req.body;
+  const { projectId } = req.body;
 
   const query = `
-    SELECT json_agg(json_build_object('project_id', public."Projects".project_id, 'project_name', public."Projects".project_name, 'hdri_link', public."Projects".hdri_link, 'poster_link', public."Projects".poster_link, 'project_key', public."Projects".project_key)) AS project_data
+  SELECT json_agg(json_build_object(
+    'model_id', public."3d_models".model_id,
+    'model_name', public."3d_models".model_name,
+    'model_link', public."3d_models".model_link,
+    'tumbnail_link', public."3d_models".tumbnail_link,
+    'owner_project_id', public."3d_models".owner_project_id
+    )) AS project_data
     FROM public."Projects"
-    WHERE owner_user_id = (SELECT id FROM public."Users" WHERE login = $1) AND project_id = $2
+    JOIN public."3d_models" ON public."3d_models".owner_project_id = public."Projects".project_id
+    WHERE public."Projects".project_id = ($2) 
+    AND "Projects".owner_user_id = (SELECT public."Users".id FROM public."Users" WHERE public."Users".login = ($1))
   `;
 
-  pool.query(query, [username, id])
+  pool.query(query, [username, projectId])
     .then(results => {
+      console.log('Пользователь ' + username + ' получил перечень моделей для проекта с id = ' + projectId);
       res.json(results.rows[0].project_data);
     })
     .catch(error => {
@@ -112,7 +121,30 @@ app.post('/models', authenticateToken, (req, res) => {
     });
 });
 
-// Маршрут для добавления проекта
+// Маршрут для добавления модели в проект
+app.post('/models/add', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { projectId } = req.body;
+
+  const query = `
+    INSERT INTO public."3d_models" (owner_project_id)
+    SELECT ($2)
+    FROM public."Projects"
+    WHERE project_id = ($2) AND owner_user_id = (SELECT public."Users".id FROM public."Users" WHERE public."Users".login = ($1));
+  `;
+
+  pool.query(query, [username, projectId])
+    .then(() => {
+      console.log('Пользователь ' + username + ' создал новый проект');
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
 app.post('/projects/add', authenticateToken, (req, res) => {
   const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
@@ -156,6 +188,39 @@ app.post('/projects/delete', authenticateToken, (req, res) => {
     });
 });
 
+app.post('/models/delete', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { modelId, projectId } = req.body;
+
+  const query = `
+  DELETE FROM public."3d_models"
+  WHERE model_id = ($3)
+    AND owner_project_id = ($2)
+    AND EXISTS (
+      SELECT 1
+      FROM public."Projects"
+      WHERE project_id = ($2)
+        AND owner_user_id = (SELECT public."Users".id FROM public."Users" WHERE public."Users".login = ($1))
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public."Material_variants"
+      WHERE material_variant_owner_id = ($3)
+    );
+  `;
+
+  pool.query(query, [username, projectId, modelId])
+    .then(() => {
+      console.log('Пользователь ' + username + ' удалил модель с id = ' + modelId);
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
 // Маршрут для изменения данных проекта
 app.post('/changedata', authenticateToken, (req, res) => {
   const token = getTokenFromRequest(req);
@@ -171,7 +236,80 @@ app.post('/changedata', authenticateToken, (req, res) => {
 
   pool.query(query, [newValue, username, id])
     .then(() => {
+      console.log('Пользователь ' + username + ' изменил значение поле ' + column + ' проекта с id = ' + id + ' на ' + newValue);
       res.json({ message: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для изменения данных модели
+app.post('/models/change', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { projectId, modelId, newValue, column } = req.body;
+
+  const query = `
+  UPDATE public."3d_models"
+  SET ${column} = ($4)
+  WHERE model_id = ($3)
+    AND owner_project_id = ($2)
+    AND EXISTS (
+      SELECT 1
+      FROM public."Projects"
+      WHERE project_id = ($2)
+        AND owner_user_id = (SELECT public."Users".id FROM public."Users" WHERE public."Users".login = ($1))
+    );
+  `;
+
+  pool.query(query, [username, projectId, modelId, newValue])
+    .then(() => {
+      console.log('Пользователь ' + username + ' изменил значение поле ' + column + ' модели с id = ' + modelId + ' на ' + newValue);
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для выдачи каталога по ключу проекта
+app.post('/data', (req, res) => {
+  const key = req.body.CatalogKey;
+  console.log('Получение каталога проекта с key: ' + key);
+
+  const query = `
+    SELECT json_agg(json_build_object(
+      'GroupName', project_name,
+      'HDRILink', hdri_link,
+      'PosterLink', poster_link,
+      'Models', (
+        SELECT json_agg(json_build_object(
+          'ModelName', model_name,
+          'ModelLink', model_link,
+          'TumbnailLink', tumbnail_link,
+          'MaterialVariants', (
+            SELECT json_agg(json_build_object(
+              'MateriaVariantName', material_variant_name,
+              'MaterialVariantLink', material_variant_tumbnail_link
+            ))
+            FROM public."Material_variants"
+            WHERE material_variant_owner_id = public."3d_models".model_id
+          )
+        ))
+        FROM public."3d_models"
+        WHERE owner_project_id = public."Projects".project_id
+      )
+    )) AS project_data
+    FROM public."Projects"
+    WHERE project_key = $1
+    GROUP BY project_name
+  `;
+
+  pool.query(query, [key])
+    .then(results => {
+      res.json(results.rows[0].project_data);
     })
     .catch(error => {
       handleError(res, error);
@@ -201,27 +339,6 @@ function authenticateToken(req, res, next) {
     next();
   });
 }
-
-// Обработчик POST-запроса
-app.post('/data', (req, res) => {
-  // Получение данных из тела запроса
-  const key = req.body.CatalogKey;
-  console.log('Получение каталога проекта с key: ' + key);
-
-  // Запрос к базе данных
-  pool.query('SELECT json_agg(json_build_object( \'GroupName\', project_name, \'HDRILink\', hdri_link, \'PosterLink\', poster_link, \'Models\', ( SELECT json_agg(json_build_object( \'ModelName\', model_name, \'ModelLink\', model_link, \'TumbnailLink\', tumbnail_link, \'MaterialVariants\', ( SELECT json_agg(json_build_object( \'MateriaVariantName\', material_variant_name, \'MaterialVariantLink\', material_variant_tumbnail_link )) FROM public."Material_variants" WHERE material_variant_owner_id = public."3d_models".model_id ) )) FROM public."3d_models" WHERE owner_project_id = public."Projects".project_id ) )) AS project_data FROM public."Projects" WHERE project_key = ($1) GROUP BY project_name;',
-    [key],
-    (error, results) => {
-      if (error) {
-        console.error('Ошибка выполнения запроса:', error);
-        res.status(500).send('Произошла ошибка на сервере');
-      } else {
-        // Отправка данных из базы данных в качестве ответа
-        res.json(results.rows[0].project_data);
-      }
-    }
-  );
-});
 
 // Запуск сервера на порту 3000
 app.listen(3000, 'localhost', () => {
