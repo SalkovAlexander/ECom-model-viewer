@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Projects</title>
+    <title>Variants</title>
     <style>
         /* Стили для таблицы */
         table {
@@ -40,26 +40,28 @@
     <div id="table-container">
     </div>
     <br></br>
-    <button id="addModelBtn">Добавить модель</button>
+    <button id="addVariantBtn">Добавить варант</button>
     <br></br>
-    <button id="back">К проектам</button>
+    <button id="back">К моделям</button>
     <br></br>
     <button id="logOutBtn">Выйти</button>
     <script>
         // Получение токена из sessionStorage
         const token = sessionStorage.getItem('token');
         const URLParams = new URLSearchParams(window.location.search);
-        const projectId = URLParams.get('ProjectId');
         const ProjectName = URLParams.get('ProjectName');
+        const projectId = URLParams.get('projectId')
+        const modelId = URLParams.get('modelId');
+        const modelName = URLParams.get('ModelName');
         // Проверка наличия токена и значения projectId
-        if (projectId == null) {
-            window.location.href = './projects.html';
+        if (modelId == null) {
+            window.location.href = './3dmodels.html';
         }
         else {
             const username = sessionStorage.getItem('username');
-            document.getElementById('route').textContent = username + ' -> ' + ProjectName + ' -> models';
+            document.getElementById('route').textContent = username + ' -> ' + ProjectName + ' -> ' + modelName + ' -> variants';
 
-            document.getElementById('addModelBtn').addEventListener('click', addModel);
+            document.getElementById('addVariantBtn').addEventListener('click', addVariant);
             document.getElementById('logOutBtn').addEventListener('click', logOut);
             document.getElementById('back').addEventListener('click', function () { window.history.back(); });
             // Отправка запроса на сервер с заголовком Authorization содержащим токен
@@ -67,13 +69,13 @@
         }
 
         function refreshTable() {
-            fetch('http://localhost:3000/models', {
+            fetch('http://localhost:3000/variants', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;charset=UTF-8',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ projectId })
+                body: JSON.stringify({ modelId })
             })
                 .then(response => response.json())
                 .then(catalog => {
@@ -92,7 +94,7 @@
             // Создать таблицу
             const table = document.createElement('table');
 
-            const exclude = ['model_id'];
+            const exclude = ['material_variant_id'];
             const keys = Object.keys(tableData[0]).filter(key => !exclude.includes(key));
 
             // Создать заголовок таблицы
@@ -106,7 +108,7 @@
             });
 
             // Создание столбцов для кнопок
-            const buttons = ['Предпросмотр', 'К вариантам', 'Удалить'];
+            const buttons = ['Предпросмотр', 'Удалить'];
 
             buttons.forEach(buttonText => {
                 const th = document.createElement('th');
@@ -138,10 +140,8 @@
 
                     if (buttonText === 'Предпросмотр') {
                         button.addEventListener('click', () => viewModel(rowData.model_id));
-                    } else if (buttonText === 'К вариантам') {
-                        button.addEventListener('click', () => editModel(rowData.model_id, rowData.model_name));
                     } else if (buttonText === 'Удалить') {
-                        button.addEventListener('click', () => deleteModel(rowData.model_id));
+                        button.addEventListener('click', () => deleteVariant(rowData.material_variant_id));
                     }
 
                     td.appendChild(button);
@@ -162,7 +162,7 @@
                     const cellIndex = target.parentNode.cellIndex;
                     const newValue = target.value;
 
-                    const rowId = tableData[rowIndex - 1].model_id;
+                    const rowId = tableData[rowIndex - 1].material_variant_id;
                     const column = keys[cellIndex];
 
                     console.log('Обновлено значение поля:', column);
@@ -177,24 +177,20 @@
             tableContainer.appendChild(table);
         }
 
-        function addModel() {
-            sendRequest('models/add', { projectId });
+        function addVariant() {
+            sendRequest('variants/add', { modelId });
         }
 
-        function deleteModel(modelId) {
-            sendRequest('models/delete', { modelId, projectId });
+        function deleteVariant(variantId) {
+            sendRequest('variants/delete', { modelId, variantId });
         }
 
-        function changeData(modelId, column, newValue) {
-            sendRequest('models/change', { projectId, modelId, newValue, column });
+        function changeData(variantId, column, newValue ) {
+            sendRequest('variants/change', { projectId, variantId, newValue, column });
         }
 
         function viewModel(key) {
             window.open(`../Site.html`);
-        }
-
-        function editModel(ModelId, ModelName) {
-            window.location.href = `./variants.html?modelId=${ModelId}&modelName=${ModelName}&ProjectName=${ProjectName}&projectId=${projectId}`;
         }
 
         function logOut() {

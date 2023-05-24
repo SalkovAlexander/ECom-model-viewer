@@ -10,11 +10,11 @@ const secretKey = 'your-secret-key';
 
 // Параметры подключения к базе данных PostgreSQL
 const pool = new Pool({
-    user: 'postgres',
-    host: 'localhost',
-    database: 'ECom',
-    password: '4065',
-    port: 5432,
+  user: 'postgres',
+  host: 'localhost',
+  database: 'ECom',
+  password: '4065',
+  port: 5432,
 });
 
 app.use(bodyParser.json());
@@ -44,8 +44,7 @@ async function checkLogin(username, password) {
     // console.log(result.rows[0].user_json.login + ' ' + result.rows[0].user_json.password + " " + typeof(result.rowCount));
     console.log(result.rowCount);
     if (result.rowCount > 0) {
-      if(result.rows[0].user_json.login == username && result.rows[0].user_json.password == password)
-      {
+      if (result.rows[0].user_json.login == username && result.rows[0].user_json.password == password) {
         return true;
       }
     } else {
@@ -102,8 +101,7 @@ app.post('/models', authenticateToken, (req, res) => {
     'model_id', public."3d_models".model_id,
     'model_name', public."3d_models".model_name,
     'model_link', public."3d_models".model_link,
-    'tumbnail_link', public."3d_models".tumbnail_link,
-    'owner_project_id', public."3d_models".owner_project_id
+    'tumbnail_link', public."3d_models".tumbnail_link
     )) AS project_data
     FROM public."Projects"
     JOIN public."3d_models" ON public."3d_models".owner_project_id = public."Projects".project_id
@@ -115,6 +113,37 @@ app.post('/models', authenticateToken, (req, res) => {
     .then(results => {
       console.log('Пользователь ' + username + ' получил перечень моделей для проекта с id = ' + projectId);
       res.json(results.rows[0].project_data);
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для получения вариантов
+app.post('/variants', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { modelId } = req.body;
+
+  const query = `
+  SELECT json_agg(json_build_object(
+    'material_variant_id', public."Material_variants".material_variant_id,
+    'material_variant_name', public."Material_variants".material_variant_name,
+    'material_variant_tumbnail_link', public."Material_variants".material_variant_tumbnail_link
+    )) AS variant_data
+  FROM public."Material_variants"
+  JOIN public."3d_models" ON public."Material_variants".material_variant_owner_id = public."3d_models".model_id
+  JOIN public."Projects" ON public."3d_models".owner_project_id = public."Projects".project_id
+  JOIN public."Users" ON public."Projects".owner_user_id = public."Users".id
+  WHERE public."3d_models".model_id = ($2)
+    AND public."Users".login = ($1);
+  `;
+
+  pool.query(query, [username, modelId])
+    .then(results => {
+      console.log('Пользователь ' + username + ' получил перечень вариантов для модели с id = ' + modelId);
+      res.json(results.rows[0].variant_data);
     })
     .catch(error => {
       handleError(res, error);
@@ -145,6 +174,7 @@ app.post('/models/add', authenticateToken, (req, res) => {
     });
 });
 
+// Маршрут для добавления проекта
 app.post('/projects/add', authenticateToken, (req, res) => {
   const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
@@ -156,6 +186,33 @@ app.post('/projects/add', authenticateToken, (req, res) => {
   `;
 
   pool.query(query, [username])
+    .then(() => {
+      console.log('Пользователь ' + username + ' создал новый проект');
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для добавления варианта в модель
+app.post('/variants/add', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { modelId } = req.body;
+
+  const query = `
+  INSERT INTO public."Material_variants" (material_variant_owner_id)
+  SELECT ($2)
+  FROM public."3d_models"
+  JOIN public."Projects" ON public."3d_models".owner_project_id = public."Projects".project_id
+  JOIN public."Users" ON public."Projects".owner_user_id = public."Users".id
+  WHERE public."3d_models".model_id = ($2)
+    AND public."Users".login = ($1);
+  `;
+
+  pool.query(query, [username, modelId])
     .then(() => {
       console.log('Пользователь ' + username + ' создал новый проект');
       res.json({ status: 'ok' });
@@ -188,6 +245,7 @@ app.post('/projects/delete', authenticateToken, (req, res) => {
     });
 });
 
+// Маршрут для удаления моделей
 app.post('/models/delete', authenticateToken, (req, res) => {
   const token = getTokenFromRequest(req);
   const decodedToken = jwt.verify(token, secretKey);
@@ -214,6 +272,37 @@ app.post('/models/delete', authenticateToken, (req, res) => {
   pool.query(query, [username, projectId, modelId])
     .then(() => {
       console.log('Пользователь ' + username + ' удалил модель с id = ' + modelId);
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для удаления вариантов
+app.post('/variants/delete', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { modelId, variantId } = req.body;
+
+  const query = `
+  DELETE FROM public."Material_variants"
+  WHERE material_variant_id = ($3)
+    AND EXISTS (
+      SELECT 1
+      FROM public."3d_models"
+      JOIN public."Projects" ON public."3d_models".owner_project_id = public."Projects".project_id
+      JOIN public."Users" ON public."Projects".owner_user_id = public."Users".id
+      WHERE public."3d_models".model_id = ($2)
+        AND public."Users".login = ($1)
+        AND public."Material_variants".material_variant_owner_id = public."3d_models".model_id
+    );
+  `;
+
+  pool.query(query, [username, modelId, variantId])
+    .then(() => {
+      console.log('Пользователь ' + username + ' удалил вариант с id = ' + variantId);
       res.json({ status: 'ok' });
     })
     .catch(error => {
@@ -267,6 +356,38 @@ app.post('/models/change', authenticateToken, (req, res) => {
   pool.query(query, [username, projectId, modelId, newValue])
     .then(() => {
       console.log('Пользователь ' + username + ' изменил значение поле ' + column + ' модели с id = ' + modelId + ' на ' + newValue);
+      res.json({ status: 'ok' });
+    })
+    .catch(error => {
+      handleError(res, error);
+    });
+});
+
+// Маршрут для изменения данных модели
+app.post('/variants/change', authenticateToken, (req, res) => {
+  const token = getTokenFromRequest(req);
+  const decodedToken = jwt.verify(token, secretKey);
+  const username = decodedToken.username;
+  const { projectId, variantId, newValue, column } = req.body;
+  console.log(projectId, variantId, newValue, column);
+  const query = `
+  UPDATE public."Material_variants"
+    SET ${column} = ($4)
+    WHERE material_variant_id = ($3)
+    AND EXISTS (
+    SELECT 1
+    FROM public."3d_models"
+    JOIN public."Projects" ON public."3d_models".owner_project_id = public."Projects".project_id
+    JOIN public."Users" ON public."Projects".owner_user_id = public."Users".id
+    WHERE public."3d_models".model_id = public."Material_variants".material_variant_owner_id
+      AND public."Users".login = ($1)
+      AND public."Projects".project_id = ($2)
+  );
+  `;
+
+  pool.query(query, [username, projectId, variantId, newValue])
+    .then(() => {
+      console.log('Пользователь ' + username + ' изменил значение поле ' + column + ' варианта с id = ' + variantId + ' на ' + newValue);
       res.json({ status: 'ok' });
     })
     .catch(error => {

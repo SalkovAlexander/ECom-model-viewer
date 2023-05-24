@@ -41,6 +41,7 @@
                     if (data.token != null) {
                         // Сохранение токена в sessionStorage
                         sessionStorage.setItem('token', data.token);
+                        sessionStorage.setItem('username', username);
                         // alert('Авторизация успешно прошла, ваш токен: ' + data.token);
                         window.location.href = './projects.html';
                     } else {

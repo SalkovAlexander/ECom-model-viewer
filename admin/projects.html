@@ -36,7 +36,7 @@
 </head>
 
 <body>
-    <h1>Projects</h1>
+    <h1 id = 'route'></h1>
     <div id="table-container">
     </div>
     <br></br>
@@ -46,18 +46,14 @@
     <script>
         // Получение токена из sessionStorage
         const token = sessionStorage.getItem('token');
-
         // Проверка наличия токена
         if (!token) {
-            document.body.textContent = 'Токен отсутствует. Выполните аутентификацию.';
-            var button = document.createElement('button');
-            button.textContent = 'Перейти на страницу авторизации';
-            button.addEventListener('click', function () {
-                window.location.href = './Login.html';
-            });
-            document.body.appendChild(button);
+            window.location.href = './SessionExpire.html';
         }
         else {
+            const username = sessionStorage.getItem('username');
+            document.getElementById('route').textContent = username + ' -> Projects';
+
             document.getElementById('addProjectBtn').addEventListener('click', addProject);
             document.getElementById('logOutBtn').addEventListener('click', logOut);
 
@@ -137,7 +133,7 @@
                     if (buttonText === 'Предпросмотр') {
                         button.addEventListener('click', () => viewProject(rowData.project_key));
                     } else if (buttonText === 'К моделям') {
-                        button.addEventListener('click', () => editProject(rowData.project_id));
+                        button.addEventListener('click', () => editProject(rowData.project_id, rowData.project_name));
                     } else if (buttonText === 'Удалить') {
                         button.addEventListener('click', () => deleteProject(rowData.project_id));
                     }
@@ -176,60 +172,27 @@
         }
 
         function addProject() {
-            fetch('http://localhost:3000/projects/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        console.log('Успешно добавлен проект');
-                        refreshTable();
-                    } else {
-                        console.log('Ошибка добавления проекта');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                });
+            sendRequest('projects/add', {});
         }
 
         function deleteProject(id) {
-            fetch('http://localhost:3000/projects/delete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ id })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        console.log('Успешно удален проект');
-                        refreshTable();
-                    } else {
-                        console.log('Ошибка удаления проекта');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка:', error);
-                });
+            sendRequest('projects/delete', { id });
         }
 
         function changeData(id, column, newValue) {
-            fetch('http://localhost:3000/changedata', {
+            sendRequest('changedata', { id, column, newValue });
+        }
+
+        function sendRequest(endpoint, data) {
+            fetch(`http://localhost:3000/${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ id, column, newValue })
+                body: JSON.stringify(data)
             })
-                .then(response => handleResponse(response, 'Успешно обновлено значение', 'Ошибка обновления значения'))
+                .then(response => handleResponse(response, 'Успешный запрос ' + endpoint, 'Ошибка запроса' + endpoint))
                 .catch(error => {
                     console.error('Ошибка:', error);
                 });
@@ -239,8 +202,8 @@
             window.open(`../Site.html?ProjectKey=${key}`);
         }
 
-        function editProject(id) {
-            window.location.href = `./3dmodels.html?ProjectId=${id}`;
+        function editProject(id, name) {
+            window.location.href = `./3dmodels.html?ProjectId=${id}&ProjectName=${name}`;
         }
 
         function logOut() {
