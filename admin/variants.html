@@ -3,48 +3,17 @@
 
 <head>
     <title>Variants</title>
-    <style>
-        /* Стили для таблицы */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            height: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-    <h1 id = 'route'></h1>
-    <div id="table-container">
+    <h2 id = 'route'></h2>
+    <div id="container">
+        <div id="table-container"></div>
+        <button id="logOutBtn">Выйти</button>
+        <button id="back">К моделям</button>
+        <button id="addVariantBtn">Добавить варант</button>
     </div>
-    <br></br>
-    <button id="addVariantBtn">Добавить варант</button>
-    <br></br>
-    <button id="back">К моделям</button>
-    <br></br>
-    <button id="logOutBtn">Выйти</button>
     <script>
         // Получение токена из sessionStorage
         const token = sessionStorage.getItem('token');
@@ -52,14 +21,14 @@
         const ProjectName = URLParams.get('ProjectName');
         const projectId = URLParams.get('projectId')
         const modelId = URLParams.get('modelId');
-        const modelName = URLParams.get('ModelName');
+        const modelName = URLParams.get('modelName');
         // Проверка наличия токена и значения projectId
         if (modelId == null) {
             window.location.href = './3dmodels.html';
         }
         else {
             const username = sessionStorage.getItem('username');
-            document.getElementById('route').textContent = username + ' -> ' + ProjectName + ' -> ' + modelName + ' -> variants';
+            document.getElementById('route').innerHTML = username + ' &#8594; ' + ProjectName + ' &#8594; ' + modelName + ' &#8594; variants';
 
             document.getElementById('addVariantBtn').addEventListener('click', addVariant);
             document.getElementById('logOutBtn').addEventListener('click', logOut);

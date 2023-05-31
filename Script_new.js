@@ -18,6 +18,7 @@ let response = new Promise(function (resolve, reject) {
   })
   .then(response => response.text())
   .then(data => {
+    console.log(data);
     resolve(data);
   })
   .catch(error => {
@@ -27,8 +28,8 @@ let response = new Promise(function (resolve, reject) {
 
 response.then(data => {
     catalog = JSON.parse(data);
-    console.log(typeof catalog);
     addModelButtons()
+    ChangeModel(catalog[0].Models[0].ModelLink, catalog[0].Models[0].ModelName)
 });
 
 function addModelButtons() {

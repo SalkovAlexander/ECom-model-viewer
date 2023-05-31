@@ -6,7 +6,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
 // Секретный ключ для подписи и верификации токена
-const secretKey = 'your-secret-key';
+const secretKey = 'HUIF&Tb67%&%BDBDrvb56&R%D%^RDb87N%rrb78r57R%DR76br';
 
 // Параметры подключения к базе данных PostgreSQL
 const pool = new Pool({
@@ -28,8 +28,10 @@ app.post('/login', async (req, res) => {
     // Создание токена с данными пользователя
     const token = jwt.sign({ username }, secretKey, { expiresIn: '3h' });
     // Отправка токена в ответе
+    console.log('Пользователь ' + username + ' вошел в систему');
     res.json({ token });
   } else {
+    console.log('Пользователь ' + username + ' пытался войти в систему');
     res.status(401).json({ message: 'Неправильный логин или пароль' });
   }
 });
@@ -82,6 +84,7 @@ app.post('/projects', authenticateToken, (req, res) => {
 
   pool.query(query, [username])
     .then(results => {
+      console.log('Пользователь ' + username + ' получил перечень проектов');
       res.json(results.rows[0].project_data);
     })
     .catch(error => {
@@ -166,7 +169,7 @@ app.post('/models/add', authenticateToken, (req, res) => {
 
   pool.query(query, [username, projectId])
     .then(() => {
-      console.log('Пользователь ' + username + ' создал новый проект');
+      console.log('Пользователь ' + username + ' создал новую модель');
       res.json({ status: 'ok' });
     })
     .catch(error => {
@@ -214,7 +217,7 @@ app.post('/variants/add', authenticateToken, (req, res) => {
 
   pool.query(query, [username, modelId])
     .then(() => {
-      console.log('Пользователь ' + username + ' создал новый проект');
+      console.log('Пользователь ' + username + ' создал новый вариант');
       res.json({ status: 'ok' });
     })
     .catch(error => {
@@ -430,6 +433,7 @@ app.post('/data', (req, res) => {
 
   pool.query(query, [key])
     .then(results => {
+      console.log('Получен проект с key = ' + key)
       res.json(results.rows[0].project_data);
     })
     .catch(error => {
